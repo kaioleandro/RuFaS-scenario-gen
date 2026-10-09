@@ -4,6 +4,7 @@ import random
 from copy import deepcopy
 from pathlib import Path
 
+SEED = 42
 ROOT = Path(__file__).resolve().parent.parent   
 
 ANIMAL_FILE = ROOT / "input/data/animal/example_freestall_animal.json"
@@ -14,13 +15,10 @@ FIPS_EXTRATION_FILE   = ROOT / "input/data/EEE/full_feeds_emissions_July2024_int
 FEED_EXTRATION_FILE   = ROOT / "input/data/feed/NASEM_Comp_with_TDN_urea.csv"
 
 OUTPUT_DIR  = ROOT / "scenarios"
-SEED = 43
 
 MILKING_OPTIONS = [2, 3]
 GENETICS_OPTIONS = [False, True]
 TOLERANCE_RANGE = (0.05, 0.15)
-RATION_VARIATION = 0.15
-RATION_ANIMAL_COMBINATION = "LAC_COW" 
 
 def main() -> None:
     base_animal = load_json(ANIMAL_FILE)
@@ -66,10 +64,10 @@ def generate_scenario(base_animal: dict, base_config: dict, base_feed: dict, rng
     config["FIPS_county_code"] = rng.choice(load_fips(FIPS_EXTRATION_FILE))
 
     params = feed["ration_formulation_parameters"]
-    params["user_defined_ration_tolerance"] = round(rng.uniform(*TOLERANCE_RANGE), 3)
+    params["user_defined_ration_tolerance"] = randomize_user_defined_ration_tolerance(rng)
 
-    lac_cow = find_ration(feed, RATION_ANIMAL_COMBINATION)
-    lac_cow["feeds"] = randomize_lac_cow_ration(lac_cow["feeds"], rng)
+    randomize_lac_cow_ration(feed, rng)
+    lac_cow = find_ration(feed, "LAC_COW")
 
     summary = {
         "cow_times_milked_per_day": management["cow_times_milked_per_day"],
@@ -138,19 +136,64 @@ def randomize_parity_fractions(original: dict, rng: random.Random) -> dict:
 def randomize_milking_fraction(rng: random.Random) -> float:
     return round(rng.uniform(0.407, 1.0), 4)
 
+def randomize_user_defined_ration_tolerance(rng: random.Random) -> float:
+    return round(rng.uniform(0.0, 1.0), 2)
 
-def randomize_lac_cow_ration(feeds: list[dict], rng: random.Random) -> list[dict]:
-    original_total = sum(f["ration_percentage"] for f in feeds)
-    values = [
-        f["ration_percentage"] * (1 + rng.uniform(-RATION_VARIATION, RATION_VARIATION))
-        for f in feeds
+
+def randomize_lac_cow_ration(
+    feed_config: dict,
+    rng: random.Random,
+) -> None:
+    with open(FEED_EXTRATION_FILE, newline="", encoding="utf-8") as file:
+        available_feeds = list(csv.DictReader(file))
+
+    selected_feeds = rng.sample(available_feeds, 4)
+
+    values = [rng.random() for _ in range(4)]
+    total = sum(values)
+
+    percentages = [
+        round(value / total * 100, 2)
+        for value in values
     ]
-    new_values = normalize(values, total=original_total, decimals=2)
 
-    new_feeds = deepcopy(feeds)
-    for feed, value in zip(new_feeds, new_values):
-        feed["ration_percentage"] = value
-    return new_feeds
+    percentages[-1] = round(
+        100.00 - sum(percentages[:-1]),
+        2,
+    )
+
+    registered_ids = {
+        int(feed["feed_type"])
+        for feed in feed_config["feeds"]
+    }
+
+    for selected_feed in selected_feeds:
+        feed_id = int(selected_feed["rufas_id"])
+
+        if feed_id not in registered_ids:
+            feed_config["feeds"].append({
+                "feed_type": feed_id,
+                "purchased_feed_cost": 0.1,
+                "buffer": 0.15,
+                "runtime_purchase_allowance": 1000.0,
+                "advance_purchase_allowance": 1000000.0,
+                "planning_cycle_allowance": 1000.0,
+            })
+
+            registered_ids.add(feed_id)
+
+    lac_cow = find_ration(feed_config, "LAC_COW")
+
+    lac_cow["feeds"] = [
+        {
+            "feed_type": int(selected_feed["rufas_id"]),
+            "ration_percentage": percentage,
+        }
+        for selected_feed, percentage in zip(
+            selected_feeds,
+            percentages,
+        )
+    ]
 
 
 def find_ration(feed_config: dict, animal_combination: str) -> dict:
