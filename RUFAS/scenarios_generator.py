@@ -19,7 +19,6 @@ SEED = 43
 MILKING_OPTIONS = [2, 3]
 MILKING_FRACTION_VARIATION = 0.05
 MILKING_FRACTION_BOUNDS = (0.50, 1.00)
-PARITY_VARIATION = 0.20
 GENETICS_OPTIONS = [False, True]
 TOLERANCE_RANGE = (0.05, 0.15)
 RATION_VARIATION = 0.15
@@ -36,9 +35,7 @@ def main() -> None:
     scenario_seed = SEED 
     rng = random.Random(scenario_seed) 
 
-    animal, config, feed, summary = generate_scenario(
-            base_animal, base_config, base_feed, rng
-        )
+    animal, config, feed, summary = generate_scenario( base_animal, base_config, base_feed, rng)
 
     save_json(animal, OUTPUT_DIR / "example_animal_random.json")
     save_json(config, OUTPUT_DIR / "example_config_random.json")
@@ -110,10 +107,6 @@ def load_fips(filepath):
 
 
 def normalize(values: list[float], total: float, decimals: int) -> list[float]:
-    """
-    Escala `values` para somar `total`, arredonda e joga o resto do
-    arredondamento no maior elemento, para a soma ser exata.
-    """
     scale = total / sum(values)
     scaled = [round(v * scale, decimals) for v in values]
     diff = round(total - sum(scaled), decimals)
@@ -121,12 +114,27 @@ def normalize(values: list[float], total: float, decimals: int) -> list[float]:
     return scaled
 
 def randomize_parity_fractions(original: dict, rng: random.Random) -> dict:
-    values = [
-        max(v * (1 + rng.uniform(-PARITY_VARIATION, PARITY_VARIATION)), 0.001)
-        for v in original.values()
-    ]
-    new_values = normalize(values, total=1.0, decimals=4)
-    return {key: new_values[i] for i, key in enumerate(original.keys())}
+    values = {
+        key: rng.random() if rng.random() > 0.1 else 0.0
+        for key in original
+    }
+
+    total = sum(values.values())
+
+    if total == 0:
+        key = rng.choice(list(original.keys()))
+        values[key] = 1.0
+        total = 1.0
+
+    result = {
+        key: round(value / total, 2)
+        for key, value in values.items()
+    }
+
+    key = max(result, key=result.get)
+    result[key] = round(result[key] + 1.0 - sum(result.values()), 2)
+
+    return result
 
 
 def randomize_milking_fraction(original: float, rng: random.Random) -> float:
