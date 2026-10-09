@@ -18,11 +18,9 @@ METADATA_FILE = ROOT / "input/metadata/example_freestall_dairy_metadata.json"
 TASK_FILE     = ROOT / "input/data/tasks/example_freestall_task.json"
 
 OUTPUT_DIR  = ROOT / "scenarios"
-SEED = 44
+SEED = 43
 
 MILKING_OPTIONS = [2, 3]
-MILKING_FRACTION_VARIATION = 0.05
-MILKING_FRACTION_BOUNDS = (0.50, 1.00)
 GENETICS_OPTIONS = [False, True]
 TOLERANCE_RANGE = (0.05, 0.15)
 
@@ -110,7 +108,7 @@ def generate_scenario(base_animal: dict, base_config: dict, base_feed: dict, rng
 
     herd = animal["herd_information"]
     herd["parity_fractions"] = randomize_parity_fractions(herd["parity_fractions"], rng)
-    herd["milking_cow_fraction"] = randomize_milking_fraction(herd["milking_cow_fraction"], rng)
+    herd["milking_cow_fraction"] = randomize_milking_fraction(rng)
     herd["simulate_genetics"] = rng.choice(GENETICS_OPTIONS)
 
     management = animal["animal_config"]["management_decisions"]
@@ -220,10 +218,8 @@ def randomize_parity_fractions(original: dict, rng: random.Random) -> dict:
     return result
 
 
-def randomize_milking_fraction(original: float, rng: random.Random) -> float:
-    value = original * (1 + rng.uniform(-MILKING_FRACTION_VARIATION, MILKING_FRACTION_VARIATION))
-    low, high = MILKING_FRACTION_BOUNDS
-    return round(min(max(value, low), high), 4)
+def randomize_milking_fraction(rng: random.Random) -> float:
+    return round(rng.uniform(0.407, 1.0), 4)
 
 
 def load_feed_library_ids(filepath: Path) -> set[int]:
@@ -323,7 +319,6 @@ def add_purchased_feeds(feed_config: dict, costs: dict[int, float]) -> None:
                 {"feed_type": feed_id, "purchased_feed_cost": cost, **PURCHASED_FEED_DEFAULTS}
             )
     feed_config["feeds"].sort(key=lambda item: item["feed_type"])
-
 
 def find_ration(feed_config: dict, animal_combination: str) -> dict:
     for ration in feed_config["rations"]:
