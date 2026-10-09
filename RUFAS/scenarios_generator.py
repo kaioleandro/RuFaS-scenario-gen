@@ -13,16 +13,12 @@ FEED_FILE   = ROOT / "input/data/feed/example_Midwest_feed.json"
 FIPS_EXTRATION_FILE   = ROOT / "input/data/EEE/full_feeds_emissions_July2024_interpolated_regional_average.csv"
 FEED_EXTRATION_FILE   = ROOT / "input/data/feed/NASEM_Comp_with_TDN_urea.csv"
 
-# Metadata e task de base: o gerador copia ambos, apontando config/animal/feed
-# para os arquivos gerados, para o cenário poder ser rodado com `python main.py -p`.
+
 METADATA_FILE = ROOT / "input/metadata/example_freestall_dairy_metadata.json"
 TASK_FILE     = ROOT / "input/data/tasks/example_freestall_task.json"
 
 OUTPUT_DIR  = ROOT / "scenarios"
-
-# RATION_SEED é a única seed do gerador: define todos os sorteios do cenário
-# (rebanho, manejo, FIPS, tolerância e composição das rações).
-RATION_SEED = 44
+SEED = 44
 
 MILKING_OPTIONS = [2, 3]
 MILKING_FRACTION_VARIATION = 0.05
@@ -31,15 +27,7 @@ PARITY_VARIATION = 0.20
 GENETICS_OPTIONS = [False, True]
 TOLERANCE_RANGE = (0.05, 0.15)
 
-# ---------------------------------------------------------------------------
-# Composição de rações
-# ---------------------------------------------------------------------------
-# Cada ração é montada a partir de um perfil: uma fração de volumoso (1 a 4
-# forragens, no máximo uma variante por família) e slots de concentrado.
-# Todos os valores são % da matéria seca (MS).
-#
-# Cada ração usa um RNG próprio, derivado de RATION_SEED + nome da ração, para
-# que a composição não dependa da ordem dos demais sorteios do cenário.
+
 MIN_FEED_SHARE = 1.0                  # % mínima da MS para qualquer feed incluído
 FORAGE_DIRICHLET_ALPHAS = (3.0, 1.5)  # (forragem principal, demais): a 1ª tende a dominar
 CONCENTRATE_DIRICHLET_ALPHA = 2.0
@@ -51,8 +39,7 @@ PURCHASED_FEED_DEFAULTS = {
     "planning_cycle_allowance": 1000.0,
 }
 
-# Variantes (maturidade/tipo) de uma mesma forragem. IDs da biblioteca NASEM,
-# todos com fator de emissão no CSV do EEE (sorgo ficou de fora por não ter).
+
 FORAGE_FAMILIES = {
     "corn_silage": [50, 51, 52],
     "legume_silage": [109, 110],
@@ -61,13 +48,8 @@ FORAGE_FAMILIES = {
     "small_grain_silage": [12, 187, 198],
     "legume_hay": [102, 103, 106, 107, 108],
     "grass_hay": [88, 89, 94, 95, 99],
-    "straw": [200],
 }
 
-# share: faixa da MS sorteada para o slot.
-# absolute=True  -> o valor sorteado é usado diretamente (mineral, gordura).
-# absolute=False -> o valor é um peso relativo; esses slots dividem o que
-#                   sobra após volumoso e slots absolutos.
 RATION_PROFILES = {
     "lac_cow": {
         "forage_share": (40.0, 60.0),
@@ -90,43 +72,6 @@ RATION_PROFILES = {
              "absolute": True, "cost": 1.0, "candidates": [301]},
         ],
     },
-    "growing": {
-        "forage_share": (60.0, 85.0),
-        "forage_count_weights": {1: 1, 2: 3, 3: 3, 4: 2},
-        "forage_family_weights": {
-            "corn_silage": 4, "legume_silage": 3, "legume_hay": 3, "grass_hay": 3,
-            "grass_legume_silage": 2, "small_grain_silage": 1, "straw": 1,
-        },
-        "concentrates": [
-            {"name": "energy", "share": (2.0, 8.0), "count": (1, 1), "probability": 0.8,
-             "absolute": False, "cost": 0.5, "candidates": [8, 40, 43, 44]},
-            {"name": "protein", "share": (8.0, 20.0), "count": (1, 1), "probability": 1.0,
-             "absolute": False, "cost": 0.1, "candidates": [25, 31, 36, 60, 167, 302, 303, 304, 305]},
-            {"name": "byproduct", "share": (2.0, 8.0), "count": (1, 1), "probability": 0.4,
-             "absolute": False, "cost": 0.1, "candidates": [15, 33, 163, 197]},
-            {"name": "mineral", "share": (1.5, 4.0), "count": (1, 1), "probability": 1.0,
-             "absolute": True, "cost": 1.0, "candidates": [301]},
-        ],
-    },
-    # Pré-parto: menos leguminosa (K/Ca altos) e mais palha/feno de gramínea.
-    "close_up": {
-        "forage_share": (55.0, 80.0),
-        "forage_count_weights": {1: 1, 2: 3, 3: 3, 4: 2},
-        "forage_family_weights": {
-            "corn_silage": 5, "grass_hay": 3, "straw": 3, "grass_silage": 2,
-            "grass_legume_silage": 2, "small_grain_silage": 1, "legume_silage": 1, "legume_hay": 1,
-        },
-        "concentrates": [
-            {"name": "energy", "share": (2.0, 10.0), "count": (1, 1), "probability": 1.0,
-             "absolute": False, "cost": 0.5, "candidates": [43, 44, 46]},
-            {"name": "protein", "share": (10.0, 22.0), "count": (1, 2), "probability": 1.0,
-             "absolute": False, "cost": 0.1, "candidates": [31, 60, 167, 170, 302, 303, 304, 305]},
-            {"name": "byproduct", "share": (2.0, 8.0), "count": (1, 1), "probability": 0.3,
-             "absolute": False, "cost": 0.1, "candidates": [15, 163, 197]},
-            {"name": "mineral", "share": (1.5, 4.0), "count": (1, 1), "probability": 1.0,
-             "absolute": True, "cost": 1.0, "candidates": [301]},
-        ],
-    },
 }
 
 def main() -> None:
@@ -136,26 +81,35 @@ def main() -> None:
     validate_ration_profiles(load_feed_library_ids(FEED_EXTRATION_FILE))
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    csv_rows = []
 
-    animal, config, feed, summary = generate_scenario(base_animal, base_config, base_feed, RATION_SEED)
+    scenario_seed = SEED 
+    rng = random.Random(scenario_seed) 
+
+    animal, config, feed, summary = generate_scenario(
+            base_animal, base_config, base_feed, rng
+        )
 
     save_json(animal, OUTPUT_DIR / "example_animal_random.json")
     save_json(config, OUTPUT_DIR / "example_config_random.json")
     save_json(feed,   OUTPUT_DIR / "example_feed_random.json")
-    write_run_files(RATION_SEED)
+    write_run_files(scenario_seed)
 
-    csv_rows = [{"ration_seed": RATION_SEED, **summary}]
+    csv_rows.append({
+        "seed": scenario_seed,
+        **summary,
+    })
+
     csv_file = OUTPUT_DIR / "scenarios.csv"
     with open(csv_file, "w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=list(csv_rows[0].keys()))
         writer.writeheader()
         writer.writerows(csv_rows)
 
-def generate_scenario(base_animal: dict, base_config: dict, base_feed: dict, seed: int):
+def generate_scenario(base_animal: dict, base_config: dict, base_feed: dict, rng: random.Random):
     animal = deepcopy(base_animal)
     config = deepcopy(base_config)
     feed = deepcopy(base_feed)
-    rng = random.Random(seed)
 
     herd = animal["herd_information"]
     herd["parity_fractions"] = randomize_parity_fractions(herd["parity_fractions"], rng)
@@ -172,9 +126,8 @@ def generate_scenario(base_animal: dict, base_config: dict, base_feed: dict, see
 
     ration_summary = {}
     for combination, profile in RATION_PROFILES.items():
-        combination_seed = derive_seed(seed, f"ration:{combination}")
         ration = find_ration(feed, combination)
-        ration["feeds"], costs, forage_share = compose_ration(profile, random.Random(combination_seed))
+        ration["feeds"], costs, forage_share = compose_ration(profile, rng)
         add_purchased_feeds(feed, costs)
 
         ration_summary[f"{combination}_forage_share"] = forage_share
@@ -203,7 +156,7 @@ def save_json(data: dict, path: Path) -> None:
     with open(path, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4, ensure_ascii=False)
 
-def write_run_files(ration_seed: int) -> None:
+def write_run_files(seed: int) -> None:
     """
     Gera o metadata e o task file do cenário. Os caminhos são relativos à raiz
     do repositório, que é de onde o RuFaS deve ser executado.
@@ -219,7 +172,7 @@ def write_run_files(ration_seed: int) -> None:
     task_config = load_json(TASK_FILE)
     for task in task_config["tasks"]:
         task["metadata_file_path"] = metadata_path.relative_to(ROOT).as_posix()
-        task["output_prefix"] = f"ration_seed{ration_seed}"
+        task["output_prefix"] = f"seed{seed}"
     task_path = OUTPUT_DIR / "scenario_task.json"
     save_json(task_config, task_path)
 
@@ -263,14 +216,6 @@ def randomize_milking_fraction(original: float, rng: random.Random) -> float:
     value = original * (1 + rng.uniform(-MILKING_FRACTION_VARIATION, MILKING_FRACTION_VARIATION))
     low, high = MILKING_FRACTION_BOUNDS
     return round(min(max(value, low), high), 4)
-
-
-def derive_seed(base_seed: int, label: str) -> int:
-    """
-    Gera uma sub-seed determinística a partir de uma seed base e um rótulo.
-    Seeds em string são estáveis entre execuções (não dependem de PYTHONHASHSEED).
-    """
-    return random.Random(f"{base_seed}:{label}").getrandbits(32)
 
 
 def load_feed_library_ids(filepath: Path) -> set[int]:
