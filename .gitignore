@@ -61,6 +61,11 @@ build/
 .DS_store
 
 .pytest_cache/
+# Local scenario inputs, downloaded runtimes and installation artifacts
+/scenarios/
+/work/
+/requirements-local.lock
+/COMO_RODAR.md
 *.bak
 tests/__pycache__/test_user_prompt.cpython-311-pytest-7.2.2.pyc.27508
 .github/workflows/combined_format_lint_test_mypy.yml
