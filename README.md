@@ -6,6 +6,20 @@
 
 # RuFaS: Ruminant Farm Systems
 
+## Scenario generator additions
+
+This fork includes a scenario workflow for batch generation, selective randomization,
+readable feed reports, preflight checks and comparison of completed simulations.
+See the [scenario workflow guide (Português / English)](docs/scenario_workflow.md).
+
+```bash
+python executar_cenario.py --seed 200 --quantidade 10 --variar alimentacao --saida scenarios/batch01
+```
+
+Use `--simular --dias 30` for an integration experiment, or `--executar <scenario-folder>`
+to simulate an existing generated scenario. Short runs are for workflow checks, not scientific validation.
+The original scenario generator remains available in `RUFAS/scenarios_generator.py`.
+
 **RuFaS** is an open-source, next-generation, whole-farm modeling environment that simulates dairy farm production and environmental impact. It is designed to support research, innovation, and sustainable decision-making in ruminant animal agriculture. 
 
 ---
